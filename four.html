@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect Four</title>
+  <style>
+    .column-selectors {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+    .column-selector {
+      width: 50px;
+      height: 20px;
+      margin: 0 2.5px;
+      background-color: #ccc;
+      cursor: pointer;
+    }
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(7, 50px);
+      grid-template-rows: repeat(6, 50px);
+      gap: 5px;
+      justify-content: center;
+    }
+    .slot {
+      width: 50px;
+      height: 50px;
+      background-color: #eee;
+      border-radius: 50%;
+    }
+    .slot.red {
+      background-color: red;
+    }
+    .slot.yellow {
+      background-color: yellow;
+    }
+    #message {
+      text-align: center;
+      font-size: 24px;
+      margin-top: 20px;
+    }
+    #play-again {
+      display: none;
+      margin: 20px auto;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .controls {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <label for="difficulty">AI Difficulty: </label>
+    <select id="difficulty">
+      <option value="1">Level 1 (Weakest)</option>
+      <option value="2">Level 2</option>
+      <option value="3">Level 3</option>
+      <option value="4">Level 4</option>
+      <option value="5">Level 5</option>
+      <option value="6">Level 6</option>
+      <option value="7">Level 7</option>
+      <option value="8">Level 8</option>
+      <option value="9">Level 9</option>
+      <option value="10">Level 10 (Strongest)</option>
+    </select>
+  </div>
+  <div class="column-selectors">
+    <div class="column-selector" data-column="0"></div>
+    <div class="column-selector" data-column="1"></div>
+    <div class="column-selector" data-column="2"></div>
+    <div class="column-selector" data-column="3"></div>
+    <div class="column-selector" data-column="4"></div>
+    <div class="column-selector" data-column="5"></div>
+    <div class="column-selector" data-column="6"></div>
+  </div>
+  <div class="game-board">
+    <script>
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 7; col++) {
+          document.write(`<div class="slot" data-row="${row}" data-col="${col}"></div>`);
+        }
+      }
+    </script>
+  </div>
+  <div id="message"></div>
+  <button id="play-again">Play Again</button>
+  <script>
+    const grid = Array.from({ length: 6 }, () => Array(7).fill(null));
+    let moveCount = 0;
+    let gameOver = false;
+    const messageDiv = document.getElementById('message');
+    const difficultySelect = document.getElementById('difficulty');
+    const playAgainButton = document.getElementById('play-again');
+
+    document.querySelectorAll('.column-selector').forEach(selector => {
+      selector.addEventListener('click', () => {
+        if (gameOver) return;
+        const col = parseInt(selector.dataset.column);
+        makeMove(col, 'red');
+      });
+    });
+
+    playAgainButton.addEventListener('click', resetGame);
+
+    function resetGame() {
+      grid.forEach(row => row.fill(null));
+      moveCount = 0;
+      gameOver = false;
+      messageDiv.textContent = '';
+      document.querySelectorAll('.slot').forEach(slot => {
+        slot.classList.remove('red', 'yellow');
+      });
+      playAgainButton.style.display = 'none';
+    }
+
+    function getLowestEmptyRow(col) {
+      for (let row = 5; row >= 0; row--) {
+        if (grid[row][col] === null) return row;
+      }
+      return -1;
+    }
+
+    function makeMove(col, player) {
+      const row = getLowestEmptyRow(col);
+      if (row === -1) return;
+      grid[row][col] = player;
+      updateVisual(row, col, player);
+      moveCount++;
+      if (checkWin(row, col, player)) {
+        displayWin(player);
+        gameOver = true;
+      } else if (moveCount === 42) {
+        displayDraw();
+        gameOver = true;
+      } else if (player === 'red') {
+        setTimeout(makeAIMove, 500);
+      }
+    }
+
+    function updateVisual(row, col, player) {
+      const slot = document.querySelector(`.slot[data-row="${row}"][data-col="${col}"]`);
+      slot.classList.add(player);
+    }
+
+    function checkWin(row, col, player) {
+      let count;
+      // Horizontal
+      count = 1;
+      for (let c = col - 1; c >= 0; c--) {
+        if (grid[row][c] === player) count++;
+        else break;
+      }
+      for (let c = col + 1; c < 7; c++) {
+        if (grid[row][c] === player) count++;
+        else break;
+      }
+      if (count >= 4) return true;
+
+      // Vertical
+      count = 1;
+      for (let r = row - 1; r >= 0; r--) {
+        if (grid[r][col] === player) count++;
+        else break;
+      }
+      for (let r = row + 1; r < 6; r++) {
+        if (grid[r][col] === player) count++;
+        else break;
+      }
+      if (count >= 4) return true;
+
+      // Diagonal /
+      count = 1;
+      for (let r = row - 1, c = col - 1; r >= 0 && c >= 0; r--, c--) {
+        if (grid[r][c] === player) count++;
+        else break;
+      }
+      for (let r = row + 1, c = col + 1; r < 6 && c < 7; r++, c++) {
+        if (grid[r][c] === player) count++;
+        else break;
+      }
+      if (count >= 4) return true;
+
+      // Diagonal \
+      count = 1;
+      for (let r = row - 1, c = col + 1; r >= 0 && c < 7; r--, c++) {
+        if (grid[r][c] === player) count++;
+        else break;
+      }
+      for (let r = row + 1, c = col - 1; r < 6 && c >= 0; r++, c--) {
+        if (grid[r][c] === player) count++;
+        else break;
+      }
+      if (count >= 4) return true;
+
+      return false;
+    }
+
+    function displayWin(player) {
+      messageDiv.textContent = player === 'red' ? "You win!" : "AI wins!";
+      playAgainButton.style.display = 'block';
+    }
+
+    function displayDraw() {
+      messageDiv.textContent = "It's a draw!";
+      playAgainButton.style.display = 'block';
+    }
+
+    function findWinningMove(player) {
+      for (let col = 0; col < 7; col++) {
+        const row = getLowestEmptyRow(col);
+        if (row !== -1) {
+          grid[row][col] = player;
+          if (checkWin(row, col, player)) {
+            grid[row][col] = null;
+            return col;
+          }
+          grid[row][col] = null;
+        }
+      }
+      return null;
+    }
+
+    function getAllLines() {
+      const lines = [];
+      // Horizontal
+      for (let row = 0; row < 6; row++) {
+        for (let col = 0; col < 4; col++) {
+          lines.push([[row, col], [row, col+1], [row, col+2], [row, col+3]]);
+        }
+      }
+      // Vertical
+      for (let col = 0; col < 7; col++) {
+        for (let row = 0; row < 3; row++) {
+          lines.push([[row, col], [row+1, col], [row+2, col], [row+3, col]]);
+        }
+      }
+      // Diagonal /
+      for (let row = 3; row < 6; row++) {
+        for (let col = 0; col < 4; col++) {
+          lines.push([[row, col], [row-1, col+1], [row-2, col+2], [row-3, col+3]]);
+        }
+      }
+      // Diagonal \
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 4; col++) {
+          lines.push([[row, col], [row+1, col+1], [row+2, col+2], [row+3, col+3]]);
+        }
+      }
+      return lines;
+    }
+
+    function evaluateBoard() {
+      const lines = getAllLines();
+      let score = 0;
+      for (const line of lines) {
+        const contents = line.map(([r, c]) => grid[r][c]);
+        const aiCount = contents.filter(cell => cell === 'yellow').length;
+        const playerCount = contents.filter(cell => cell === 'red').length;
+        const emptyCount = contents.filter(cell => cell === null).length;
+        if (aiCount === 4) score += 10000;
+        else if (aiCount === 3 && emptyCount === 1) score += 100;
+        else if (aiCount === 2 && emptyCount === 2) score += 10;
+        if (playerCount === 4) score -= 10000;
+        else if (playerCount === 3 && emptyCount === 1) score -= 100;
+        else if (playerCount === 2 && emptyCount === 2) score -= 10;
+      }
+      return score;
+    }
+
+    function minimax(depth, isMaximizing) {
+      if (depth === 0 || moveCount === 42) {
+        return evaluateBoard();
+      }
+      if (isMaximizing) {
+        let maxEval = -Infinity;
+        for (let col = 0; col < 7; col++) {
+          const row = getLowestEmptyRow(col);
+          if (row !== -1) {
+            grid[row][col] = 'yellow';
+            moveCount++;
+            let score = checkWin(row, col, 'yellow') ? 10000 : minimax(depth - 1, false);
+            grid[row][col] = null;
+            moveCount--;
+            maxEval = Math.max(maxEval, score);
+          }
+        }
+        return maxEval;
+      } else {
+        let minEval = Infinity;
+        for (let col = 0; col < 7; col++) {
+          const row = getLowestEmptyRow(col);
+          if (row !== -1) {
+            grid[row][col] = 'red';
+            moveCount++;
+            let score = checkWin(row, col, 'red') ? -10000 : minimax(depth - 1, true);
+            grid[row][col] = null;
+            moveCount--;
+            minEval = Math.min(minEval, score);
+          }
+        }
+        return minEval;
+      }
+    }
+
+    function makeAIMove() {
+      if (gameOver) return;
+      const level = parseInt(difficultySelect.value);
+      let col;
+      if (level >= 3) {
+        col = findWinningMove('yellow');
+        if (col !== null) {
+          makeMove(col, 'yellow');
+          return;
+        }
+      }
+      if (level >= 2) {
+        col = findWinningMove('red');
+        if (col !== null) {
+          makeMove(col, 'yellow');
+          return;
+        }
+      }
+      if (level >= 4) {
+        const depth = Math.min(level - 3, 4);
+        let bestScore = -Infinity;
+        let bestCol = null;
+        for (let c = 0; c < 7; c++) {
+          const r = getLowestEmptyRow(c);
+          if (r !== -1) {
+            grid[r][c] = 'yellow';
+            moveCount++;
+            const score = minimax(depth - 1, false);
+            grid[r][c] = null;
+            moveCount--;
+            if (score > bestScore) {
+              bestScore = score;
+              bestCol = c;
+            }
+          }
+        }
+        if (bestCol !== null) {
+          makeMove(bestCol, 'yellow');
+          return;
+        }
+      }
+      // Random move
+      const availableColumns = [];
+      for (let c = 0; c < 7; c++) {
+        if (grid[0][c] === null) availableColumns.push(c);
+      }
+      if (availableColumns.length > 0) {
+        col = availableColumns[Math.floor(Math.random() * availableColumns.length)];
+        makeMove(col, 'yellow');
+      }
+    }
+  </script>
+</body>
+</html>
